@@ -2,7 +2,10 @@
 import { auth, db } from '../firebase-config.js';
 import {
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  setPersistence,
+  browserLocalPersistence,
   signOut,
   onAuthStateChanged,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -19,15 +22,30 @@ const provider = new GoogleAuthProvider();
 // ── Sign In ───────────────────────────────────────────────────────────────
 export async function signInWithGoogle() {
   try {
-    const result = await signInWithPopup(auth, provider);
-    await ensureUserDocument(result.user);
-    return result.user;
+    // Explicitly set local persistence before redirecting so the session
+    // survives the page navigation and is restored when we return
+    await setPersistence(auth, browserLocalPersistence);
+    await signInWithRedirect(auth, provider);
   } catch (err) {
-    if (err.code === 'auth/popup-closed-by-user' ||
-        err.code === 'auth/cancelled-popup-request') return null;
     console.error('Sign-in error:', err);
     showToast('Sign-in failed. Please try again.', 'error');
-    return null;
+  }
+}
+
+// ── Handle redirect result on page load ──────────────────────────────────
+// Called once on app init — completes the sign-in after returning from Google
+export async function handleRedirectResult() {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      await ensureUserDocument(result.user);
+    }
+  } catch (err) {
+    if (err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/cancelled-popup-request') return;
+    console.error('Redirect result error:', err);
+    showToast('Sign-in failed. Please try again.', 'error');
   }
 }
 
