@@ -1,0 +1,163 @@
+/* ── Profile Header ─────────────────────────────────────────────────────── */
+.profile-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--border);
+  background: var(--surface-2);
+}
+
+.profile-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.profile-email {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.profile-post-count {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Group chips on profile */
+.profile-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  max-width: 320px;
+}
+.profile-group-chip {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+/* ── Theme Selector ─────────────────────────────────────────────────────── */
+.theme-selector-section {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.theme-options {
+  display: flex;
+  gap: 6px;
+  background: var(--surface-2);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  border: 1px solid var(--border);
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 36px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.theme-option.active {
+  background: linear-gradient(135deg, var(--brand-start), var(--brand-mid), var(--brand-end));
+  color: #fff;
+}
+
+/* Sign out button */
+.btn-sign-out {
+  margin-top: 8px;
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 4px 16px;
+  font-family: inherit;
+}
+
+/* ── Posts Grid ─────────────────────────────────────────────────────────── */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: var(--border);
+}
+
+.profile-grid-item {
+  aspect-ratio: 1;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-2);
+  position: relative;
+}
+
+.profile-grid-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.15s;
+}
+.profile-grid-item:hover img { opacity: 0.85; }
+
+.profile-grid-multi-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 14px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+}
+
+/* Skeleton profile grid */
+.skeleton-grid-item {
+  aspect-ratio: 1;
+  background: var(--surface-2);
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-grid-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  animation: shimmer 1.4s infinite;
+}

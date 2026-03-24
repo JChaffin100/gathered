@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#3a4fd4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Gathered">
+  <meta name="description" content="Share photos privately with family and friends. No ads, no algorithm.">
+
+  <title>Gathered</title>
+
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/auth.css">
+  <link rel="stylesheet" href="/css/feed.css">
+  <link rel="stylesheet" href="/css/post.css">
+  <link rel="stylesheet" href="/css/profile.css">
+  <link rel="stylesheet" href="/css/groups.css">
+
+  <!-- Prevent theme flash — must run before paint -->
+  <script>
+    (function() {
+      var pref = localStorage.getItem('gathered_theme') || 'system';
+      if (pref === 'system') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', pref);
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ── Toast Region (ARIA live) ────────────────────────────────────────── -->
+  <div id="toast-region" aria-live="polite" aria-atomic="true" role="status"></div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SCREEN: Auth (Sign-in)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-auth" class="screen active" role="main" aria-label="Sign in to Gathered">
+    <div class="auth-card">
+      <img class="auth-logo" src="/icons/icon-192.png" alt="Gathered app icon" width="120" height="120">
+      <h1 class="auth-title">Gathered</h1>
+      <p class="auth-tagline">Share moments with the people who matter.</p>
+
+      <div class="divider auth-divider"></div>
+
+      <button class="btn-google" id="sign-in-btn" aria-label="Sign in with Google">
+        <!-- Google "G" logo SVG -->
+        <svg class="google-logo" aria-hidden="true" viewBox="0 0 48 48">
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.5-1.45-.77-3-.77-4.59s.27-3.14.77-4.59l-7.98-6.16C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.55 10.75l7.98-6.16z"/>
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.25l7.98 6.16C12.43 13.72 17.74 9.5 24 9.5z"/>
+        </svg>
+        Sign in with Google
+      </button>
+
+      <p class="auth-fine-print">By signing in you agree to keep this space kind and private.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SCREEN: Feed (Home)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-feed" class="screen" role="main" aria-label="Home feed">
+    <!-- Top Bar -->
+    <header class="top-bar" role="banner">
+      <span class="top-bar-title" aria-label="Gathered">Gathered</span>
+      <div class="top-bar-actions">
+        <!-- Notification bell (v2 placeholder) -->
+        <button class="icon-btn" aria-label="Notifications (coming soon)" disabled>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </button>
+        <!-- Group settings gear (shown for admins only) -->
+        <button class="icon-btn" id="group-settings-btn" aria-label="Group settings" hidden>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Group Switcher -->
+    <div id="group-switcher" class="group-switcher" role="tablist" aria-label="Your groups"></div>
+
+    <!-- Feed Body -->
+    <div class="screen-body">
+      <!-- Feed list (ARIA live for real-time posts) -->
+      <div id="feed-list" aria-live="polite" aria-relevant="additions" aria-label="Posts"></div>
+
+      <!-- Empty state: no groups -->
+      <div id="no-groups-state" class="empty-state" style="display:none">
+        <div class="empty-state-icon">👋</div>
+        <h2>You're not in any groups yet.</h2>
+        <p>Create a private group or join one with an invite link.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px;margin-top:8px">
+          <button class="btn btn-primary btn-full" id="create-group-cta">Create a Group</button>
+          <button class="btn btn-secondary btn-full" id="join-group-cta">Join with Invite Link</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SCREEN: Post Detail
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-post-detail" class="screen" role="main" aria-label="Post detail">
+    <header class="top-bar">
+      <button class="icon-btn" id="post-detail-back" aria-label="Back to feed">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+      </button>
+      <span class="top-bar-title" style="font-size:17px">Post</span>
+      <span style="width:44px"></span><!-- spacer -->
+    </header>
+    <div class="screen-body"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SCREEN: Profile
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-profile" class="screen" role="main" aria-label="Profile">
+    <header class="top-bar">
+      <button class="icon-btn" id="profile-back" aria-label="Back" style="display:none">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+      </button>
+      <span class="top-bar-title" style="font-size:17px">Profile</span>
+      <span style="width:44px"></span>
+    </header>
+    <div class="screen-body"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       SCREEN: Search (v2 placeholder)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="screen-search" class="screen" role="main" aria-label="Search">
+    <header class="top-bar">
+      <span class="top-bar-title" style="font-size:17px">Search</span>
+    </header>
+    <div class="screen-body">
+      <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <h2>Search</h2>
+        <p>Coming soon — search within your groups.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       BOTTOM NAVIGATION
+  ══════════════════════════════════════════════════════════════════════ -->
+  <nav id="bottom-nav" aria-label="Main navigation">
+    <button class="nav-btn active" id="nav-home" aria-label="Home feed" aria-current="page">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+      <span>Home</span>
+    </button>
+
+    <button class="nav-btn" id="nav-search" aria-label="Search">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <span>Search</span>
+    </button>
+
+    <!-- FAB-style center button -->
+    <button class="nav-btn nav-fab" id="nav-post" aria-label="Create new post">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+    </button>
+
+    <button class="nav-btn" id="nav-profile" aria-label="Your profile">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span>Profile</span>
+    </button>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       BOTTOM SHEETS / DIALOGS
+  ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Create Post Sheet -->
+  <div id="create-post-backdrop" class="sheet-backdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Create new post">
+    <div id="create-post-sheet" class="sheet" role="document"></div>
+  </div>
+
+  <!-- Edit Post Sheet -->
+  <div id="edit-post-backdrop" class="sheet-backdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Edit post">
+    <div id="edit-post-sheet" class="sheet" role="document"></div>
+  </div>
+
+  <!-- Group Settings Sheet -->
+  <div id="group-settings-backdrop" class="sheet-backdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Group settings">
+    <div id="group-settings-sheet" class="sheet" role="document"></div>
+  </div>
+
+  <!-- Add Group Sheet (create / join) -->
+  <div id="add-group-backdrop" class="sheet-backdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Add group">
+    <div class="sheet" role="document"></div>
+  </div>
+
+  <!-- ── Sign-In Button wired here after DOM ready ─────────────────────── -->
+  <script type="module">
+    import { signInWithGoogle } from '/js/auth.js';
+    document.getElementById('sign-in-btn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('sign-in-btn');
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      await signInWithGoogle();
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg class="google-logo" aria-hidden="true" viewBox="0 0 48 48">
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.5-1.45-.77-3-.77-4.59s.27-3.14.77-4.59l-7.98-6.16C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.55 10.75l7.98-6.16z"/>
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.25l7.98 6.16C12.43 13.72 17.74 9.5 24 9.5z"/>
+        </svg>
+        Sign in with Google`;
+    });
+  </script>
+
+  <!-- App bootstrap -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

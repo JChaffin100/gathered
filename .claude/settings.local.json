@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from PIL import Image; print\\(''PIL available''\\)\")",
+      "Bash(python -m pip install Pillow -q)",
+      "Bash(python -c \"from PIL import Image; print\\(''PIL ready''\\)\")",
+      "Bash(python3 -:*)",
+      "Bash(python -:*)",
+      "Bash(grep -rn \"from ''''./app.js''''\" /c/Users/yahoo/PythtonCode/gathered/js/)",
+      "Bash(python -c \":*)"
+    ]
+  }
+}
