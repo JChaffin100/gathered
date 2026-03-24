@@ -1,28 +1,28 @@
 // sw.js — Gathered Service Worker
 // Cache-first for app shell; pass-through for Firebase/Google APIs
 
-const CACHE_NAME = 'gathered-v4';
+const CACHE_NAME = 'gathered-v5';
 const APP_SHELL = [
-  '/gathered/',
-  '/gathered/index.html',
-  '/gathered/manifest.json',
-  '/gathered/css/styles.css',
-  '/gathered/css/auth.css',
-  '/gathered/css/feed.css',
-  '/gathered/css/post.css',
-  '/gathered/css/profile.css',
-  '/gathered/css/groups.css',
-  '/gathered/js/app.js',
-  '/gathered/js/auth.js',
-  '/gathered/js/feed.js',
-  '/gathered/js/post.js',
-  '/gathered/js/profile.js',
-  '/gathered/js/groups.js',
-  '/gathered/js/storage.js',
-  '/gathered/js/utils.js',
-  '/gathered/icons/icon-192.png',
-  '/gathered/icons/icon-512.png',
-  '/gathered/icons/apple-touch-icon.png',
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/css/styles.css',
+  '/css/auth.css',
+  '/css/feed.css',
+  '/css/post.css',
+  '/css/profile.css',
+  '/css/groups.css',
+  '/js/app.js',
+  '/js/auth.js',
+  '/js/feed.js',
+  '/js/post.js',
+  '/js/profile.js',
+  '/js/groups.js',
+  '/js/storage.js',
+  '/js/utils.js',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
 ];
 
 // Hosts that must never be intercepted (Firebase / Google APIs)
@@ -61,6 +61,9 @@ self.addEventListener('activate', (event) => {
 
 // ── Fetch ──────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
+  // Only handle GET requests — POST and others must not be cached
+  if (event.request.method !== 'GET') return;
+
   const url = new URL(event.request.url);
 
   // Let Firebase / Google auth calls go straight to the network
@@ -89,7 +92,7 @@ async function cacheFirst(request) {
   } catch {
     // Return the cached index.html as fallback for navigation requests
     if (request.mode === 'navigate') {
-      return caches.match('/gathered/index.html');
+      return caches.match('/index.html');
     }
     return new Response('Offline', { status: 503 });
   }

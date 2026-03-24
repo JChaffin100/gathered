@@ -266,6 +266,7 @@ textarea {
   overflow: hidden;
 }
 .screen.active { display: flex; }
+.screen:not(.active) { display: none !important; }
 
 /* Main content area scrolls */
 .screen-body {

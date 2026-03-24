@@ -42,8 +42,10 @@ async function init() {
   // Must finish before listenAuthState so onAuthStateChanged sees the signed-in user.
   await handleRedirectResult();
 
-  // Auth state
-  listenAuthState(onSignedIn, onSignedOut);
+  // Auth state — small delay ensures DOM is fully ready before auth state fires
+  setTimeout(() => {
+    listenAuthState(onSignedIn, onSignedOut);
+  }, 100);
 
   // Check for invite token in URL
   checkInviteToken();
