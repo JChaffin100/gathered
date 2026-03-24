@@ -1,7 +1,7 @@
 // js/app.js — App initialization, routing, navigation
 // Theme must be applied before any render — done inline in <head>.
 
-import { listenAuthState, auth } from './auth.js';
+import { listenAuthState, handleRedirectResult, auth } from './auth.js';
 import { subscribeFeed, unsubscribeFeed, loadMorePosts, setGroupAdminCache } from './feed.js';
 import { renderOwnProfile, renderUserProfile } from './profile.js';
 import { openCreatePost, openPostDetail as _openPostDetail } from './post.js';
@@ -25,7 +25,7 @@ window.addEventListener('gathered:openDetail', (e) => {
 });
 
 // ── App Init ──────────────────────────────────────────────────────────────
-function init() {
+async function init() {
   // Service Worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -37,6 +37,10 @@ function init() {
   // Online / offline toasts
   window.addEventListener('offline', () => showToast("You're offline — some features are unavailable.", 'error'));
   window.addEventListener('online',  () => showToast('Back online!', 'success'));
+
+  // Handle redirect result FIRST — must complete before auth state listener
+  // fires, so that onAuthStateChanged sees the signed-in user immediately
+  await handleRedirectResult();
 
   // Auth state
   listenAuthState(onSignedIn, onSignedOut);
@@ -202,15 +206,13 @@ function renderGroupSwitcher() {
 
 // ── Gear icon visibility ──────────────────────────────────────────────────
 function updateGearVisibility() {
-  const gearBtn = document.getElementById('group-settings-btn');
-  if (!gearBtn || !_activeGroupId || !_currentUser) { gearBtn?.setAttribute('hidden', ''); return; }
+  const btn = document.getElementById('group-settings-btn');
+  if (!btn || !_currentUser || !_activeGroupId) return;
   const group = _userGroups.find((g) => g.id === _activeGroupId);
   const isAdmin = group?.members?.[_currentUser.uid]?.role === 'admin';
-  if (isAdmin) gearBtn.removeAttribute('hidden');
-  else gearBtn.setAttribute('hidden', '');
+  btn.style.display = isAdmin ? '' : 'none';
 }
 
-// ── Add Group Sheet (create or join) ─────────────────────────────────────
 function showAddGroupSheet() {
   const backdrop = document.getElementById('add-group-backdrop');
   if (!backdrop) return;
