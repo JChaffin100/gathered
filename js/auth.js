@@ -2,8 +2,7 @@
 import { auth, db } from '../firebase-config.js';
 import {
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -20,28 +19,15 @@ const provider = new GoogleAuthProvider();
 // ── Sign In ───────────────────────────────────────────────────────────────
 export async function signInWithGoogle() {
   try {
-    await signInWithRedirect(auth, provider);
-    // Page will redirect to Google and back — no return value here
+    const result = await signInWithPopup(auth, provider);
+    await ensureUserDocument(result.user);
+    return result.user;
   } catch (err) {
+    if (err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/cancelled-popup-request') return null;
     console.error('Sign-in error:', err);
     showToast('Sign-in failed. Please try again.', 'error');
-  }
-}
-
-// ── Handle redirect result on page load ──────────────────────────────────
-// Must be called early in app init to complete the sign-in after redirect
-export async function handleRedirectResult() {
-  try {
-    const result = await getRedirectResult(auth);
-    if (result?.user) {
-      await ensureUserDocument(result.user);
-    }
-  } catch (err) {
-    // Ignore cancelled sign-ins
-    if (err.code === 'auth/popup-closed-by-user' ||
-        err.code === 'auth/cancelled-popup-request') return;
-    console.error('Redirect result error:', err);
-    showToast('Sign-in failed. Please try again.', 'error');
+    return null;
   }
 }
 

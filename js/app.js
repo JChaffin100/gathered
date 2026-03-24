@@ -1,7 +1,7 @@
 // js/app.js — App initialization, routing, navigation
 // Theme must be applied before any render — done inline in <head>.
 
-import { listenAuthState, handleRedirectResult, auth } from './auth.js';
+import { listenAuthState, auth } from './auth.js';
 import { subscribeFeed, unsubscribeFeed, loadMorePosts, setGroupAdminCache } from './feed.js';
 import { renderOwnProfile, renderUserProfile } from './profile.js';
 import { openCreatePost, openPostDetail as _openPostDetail } from './post.js';
@@ -25,7 +25,7 @@ window.addEventListener('gathered:openDetail', (e) => {
 });
 
 // ── App Init ──────────────────────────────────────────────────────────────
-async function init() {
+function init() {
   // Service Worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -37,10 +37,6 @@ async function init() {
   // Online / offline toasts
   window.addEventListener('offline', () => showToast("You're offline — some features are unavailable.", 'error'));
   window.addEventListener('online',  () => showToast('Back online!', 'success'));
-
-  // Handle redirect result FIRST — must complete before auth state listener
-  // fires, so that onAuthStateChanged sees the signed-in user immediately
-  await handleRedirectResult();
 
   // Auth state
   listenAuthState(onSignedIn, onSignedOut);
@@ -372,7 +368,6 @@ async function checkInviteToken() {
 }
 
 function showJoinConfirmScreen(group) {
-  // Show a simple full-screen join confirm
   const screen = document.getElementById('screen-auth');
   screen.classList.add('active');
   document.querySelectorAll('.screen').forEach((s) => { if (s !== screen) s.classList.remove('active'); });
