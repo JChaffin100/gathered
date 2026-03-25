@@ -57,25 +57,23 @@ export function uploadPhoto(blob, storagePath, onProgress) {
 }
 
 // ── Upload all photos for a post ──────────────────────────────────────────
-// files: File[] from input
+// preparedPhotos: Array of { blob, width, height }
 // groupId, postId: strings
 // onProgress(overall 0–100): optional
 // Returns array of { url, storagePath, width, height }
-export async function uploadPostPhotos(files, groupId, postId, onProgress) {
+export async function uploadPostPhotos(preparedPhotos, groupId, postId, onProgress) {
   const results = [];
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const compressed = await compressImage(file);
-    if (!compressed) throw new Error(`Failed to compress photo ${i + 1}`);
-
+  for (let i = 0; i < preparedPhotos.length; i++) {
+    const photo = preparedPhotos[i];
     const storagePath = `groups/${groupId}/posts/${postId}/${i}.jpg`;
-    const { url } = await uploadPhoto(compressed.blob, storagePath, (pct) => {
+    
+    const { url } = await uploadPhoto(photo.blob, storagePath, (pct) => {
       if (onProgress) {
-        const overall = ((i + pct / 100) / files.length) * 100;
+        const overall = ((i + pct / 100) / preparedPhotos.length) * 100;
         onProgress(Math.round(overall));
       }
     });
-    results.push({ url, storagePath, width: compressed.width, height: compressed.height });
+    results.push({ url, storagePath, width: photo.width, height: photo.height });
   }
   return results;
 }

@@ -14,7 +14,7 @@ import {
   serverTimestamp,
   increment,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { uploadPostPhotos } from './storage.js';
+import { uploadPostPhotos, compressImage } from './storage.js';
 import { showToast, escapeHtml, timeAgo, isoDate, isOnline, confirmSheet, openSheet, closeSheet, trapFocus, navigate } from './utils.js';
 
 // ── Post Detail ───────────────────────────────────────────────────────────
@@ -361,10 +361,37 @@ function renderCreatePostSheet(groupId, groups) {
   document.getElementById('post-submit-btn').addEventListener('click', () => submitPost());
 }
 
-function handleFileSelection(files) {
+async function handleFileSelection(files) {
   const newFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
-  const combined = [..._selectedFiles, ...newFiles].slice(0, 10);
+  if (newFiles.length === 0) return;
+
+  const combined = [..._selectedFiles, ...newFiles.map((f) => ({ file: f, isReady: false }))].slice(0, 10);
   _selectedFiles = combined;
+  renderThumbnails();
+
+  const nextBtn = document.getElementById('step1-next');
+  if (nextBtn) {
+    nextBtn.disabled = true;
+    nextBtn.textContent = 'Processing Photos...';
+  }
+
+  for (let i = 0; i < _selectedFiles.length; i++) {
+    const item = _selectedFiles[i];
+    if (!item.isReady) {
+      const compressed = await compressImage(item.file);
+      if (compressed) {
+        item.blob = compressed.blob;
+        item.width = compressed.width;
+        item.height = compressed.height;
+        item.objectUrl = URL.createObjectURL(compressed.blob);
+        item.isReady = true;
+      } else {
+        _selectedFiles.splice(i, 1);
+        i--;
+      }
+    }
+  }
+
   renderThumbnails();
 }
 
@@ -374,11 +401,11 @@ function renderThumbnails() {
   const next  = document.getElementById('step1-next');
   if (!grid) return;
 
-  grid.innerHTML = _selectedFiles.map((f, i) => {
-    const url = URL.createObjectURL(f);
+  grid.innerHTML = _selectedFiles.map((item, i) => {
+    const url = item.objectUrl || URL.createObjectURL(item.file);
     return `
       <div class="photo-thumb-wrap">
-        <img class="photo-thumb" src="${url}" alt="Selected photo ${i + 1}">
+        <img class="photo-thumb" src="${url}" alt="Selected photo ${i + 1}" ${!item.isReady ? 'style="opacity:0.5"' : ''}>
         <button class="photo-thumb-remove" aria-label="Remove photo ${i + 1}" data-index="${i}">✕</button>
       </div>`;
   }).join('');
@@ -391,7 +418,16 @@ function renderThumbnails() {
   });
 
   if (count) count.textContent = _selectedFiles.length > 0 ? `${_selectedFiles.length} of 10 photo${_selectedFiles.length !== 1 ? 's' : ''} selected` : '';
-  if (next)  next.disabled = _selectedFiles.length === 0;
+  if (next) {
+    const isProcessing = _selectedFiles.some((f) => !f.isReady);
+    if (!isProcessing) {
+      next.disabled = _selectedFiles.length === 0;
+      next.textContent = 'Next: Add Caption';
+    } else {
+      next.disabled = true;
+      next.textContent = 'Processing Photos...';
+    }
+  }
 }
 
 function showStep2() {
@@ -402,8 +438,8 @@ function showStep2() {
   document.getElementById('create-post-title').textContent = 'Add Details';
 
   const list = document.getElementById('photo-captions-list');
-  list.innerHTML = _selectedFiles.map((f, i) => {
-    const url = URL.createObjectURL(f);
+  list.innerHTML = _selectedFiles.map((item, i) => {
+    const url = item.objectUrl || URL.createObjectURL(item.file);
     return `
       <div class="photo-caption-item">
         <img class="photo-caption-thumb" src="${url}" alt="Photo ${i + 1}">
