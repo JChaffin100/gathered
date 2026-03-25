@@ -209,10 +209,7 @@ function renderGroupSwitcher() {
 // ── Gear icon visibility ──────────────────────────────────────────────────
 function updateGearVisibility() {
   const btn = document.getElementById('group-settings-btn');
-  if (!btn || !_currentUser || !_activeGroupId) return;
-  const group = _userGroups.find((g) => g.id === _activeGroupId);
-  const isAdmin = group?.members?.[_currentUser.uid]?.role === 'admin';
-  btn.style.display = isAdmin ? '' : 'none';
+  if (btn) btn.style.display = ''; // Always visible so non-admins can see the member list
 }
 
 function showAddGroupSheet() {
