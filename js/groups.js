@@ -7,6 +7,7 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -48,7 +49,7 @@ export async function createGroup(name, coverFile) {
       joinedAt:    serverTimestamp(),
     };
 
-    await addDoc(collection(db, 'groups'), {
+    await setDoc(groupRef, {
       id:          groupId,
       name:        name.trim(),
       photoURL,
@@ -57,12 +58,11 @@ export async function createGroup(name, coverFile) {
       members:     { [user.uid]: memberObj },
       inviteToken,
       memberCount: 1,
-    }).then(async (ref) => {
-      // Also update user's groupIds
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, { groupIds: arrayUnion(ref.id) });
-      return ref;
     });
+
+    // Also update user's groupIds
+    const userRef = doc(db, 'users', user.uid);
+    await updateDoc(userRef, { groupIds: arrayUnion(groupId) });
 
     showToast('Group created!', 'success');
     return groupId;
