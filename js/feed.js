@@ -375,6 +375,12 @@ function initCarousel(carousel) {
 }
 
 // ── Fullscreen Viewer ─────────────────────────────────────────────────────
+function closeFullscreen(viewer) {
+  viewer.classList.remove('open');
+  const img = viewer.querySelector('img');
+  if (img) img.style.transform = '';
+}
+
 function openFullscreen(src, alt) {
   let viewer = document.getElementById('fullscreen-viewer');
   if (!viewer) {
@@ -388,12 +394,85 @@ function openFullscreen(src, alt) {
       <img class="fullscreen-viewer-img" src="" alt="">
       <button class="fullscreen-viewer-close icon-btn" aria-label="Close photo viewer">✕</button>`;
     document.body.appendChild(viewer);
-    viewer.querySelector('.fullscreen-viewer-close').addEventListener('click', () => viewer.classList.remove('open'));
-    viewer.addEventListener('click', (e) => { if (e.target === viewer) viewer.classList.remove('open'); });
-    viewer.addEventListener('keydown', (e) => { if (e.key === 'Escape') viewer.classList.remove('open'); });
+
+    viewer.querySelector('.fullscreen-viewer-close').addEventListener('click', () => closeFullscreen(viewer));
+    viewer.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFullscreen(viewer); });
+
+    // ── Pinch-to-zoom and pan ─────────────────────────────────────────────
+    const img = viewer.querySelector('img');
+    let scale = 1, lastScale = 1;
+    let translateX = 0, translateY = 0;
+    let initialDistance = 0;
+    let panStartX = 0, panStartY = 0;
+    let isPanning = false;
+
+    function applyTransform() {
+      img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+
+    function resetTransform() {
+      scale = 1; lastScale = 1;
+      translateX = 0; translateY = 0;
+      img.style.transform = '';
+    }
+
+    function getDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    viewer.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        initialDistance = getDistance(e.touches);
+        lastScale = scale;
+        isPanning = false;
+      } else if (e.touches.length === 1 && scale > 1) {
+        isPanning = true;
+        panStartX = e.touches[0].clientX - translateX;
+        panStartY = e.touches[0].clientY - translateY;
+      }
+    }, { passive: false });
+
+    viewer.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const distance = getDistance(e.touches);
+        scale = Math.max(1, Math.min(5, lastScale * (distance / initialDistance)));
+        applyTransform();
+      } else if (e.touches.length === 1 && isPanning && scale > 1) {
+        e.preventDefault();
+        translateX = e.touches[0].clientX - panStartX;
+        translateY = e.touches[0].clientY - panStartY;
+        applyTransform();
+      }
+    }, { passive: false });
+
+    viewer.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0) {
+        isPanning = false;
+        if (scale < 1.05) resetTransform();
+      }
+    });
+
+    // Double-tap to zoom in/out
+    let lastTap = 0;
+    viewer.addEventListener('click', (e) => {
+      if (e.target === viewer) { closeFullscreen(viewer); return; }
+      const now = Date.now();
+      if (now - lastTap < 300 && e.target === img) {
+        if (scale > 1) { resetTransform(); } else { scale = 2.5; applyTransform(); }
+      }
+      lastTap = now;
+    });
   }
-  viewer.querySelector('img').src = src;
-  viewer.querySelector('img').alt = alt;
+
+  // Reset zoom whenever a new image opens
+  const img = viewer.querySelector('img');
+  img.style.transform = '';
+  img.src = src;
+  img.alt = alt;
   viewer.classList.add('open');
   viewer.querySelector('.fullscreen-viewer-close').focus();
 }
