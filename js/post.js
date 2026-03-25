@@ -124,11 +124,17 @@ function initDetailCarousel(carousel) {
     track.style.transform = `translateX(-${current * 100}%)`;
     dots.forEach((d, idx) => d.classList.toggle('active', idx === current));
   };
-  carousel.addEventListener('pointerdown', (e) => { startX = e.clientX; });
+  carousel.addEventListener('pointerdown', (e) => {
+    startX = e.clientX;
+    carousel.setPointerCapture(e.pointerId);
+  });
   carousel.addEventListener('pointerup', (e) => {
     const diff = e.clientX - startX;
     if (Math.abs(diff) > 50) goTo(current + (diff < 0 ? 1 : -1));
   });
+  carousel.addEventListener('pointermove', (e) => {
+    if (Math.abs(e.clientX - startX) > 10) e.preventDefault();
+  }, { passive: false });
 }
 
 // ── Comments ──────────────────────────────────────────────────────────────

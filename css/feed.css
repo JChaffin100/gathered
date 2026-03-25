@@ -108,6 +108,8 @@
   position: relative;
   background: var(--surface-2);
   overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
 }
 
 .carousel-track {
