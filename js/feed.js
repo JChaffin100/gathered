@@ -47,7 +47,15 @@ export function subscribeFeed(groupId) {
     snapshot.docChanges().forEach((change) => {
       if (change.type === 'added') {
         const existing = document.getElementById(`post-${change.doc.id}`);
-        if (!existing) prependPostCard(change.doc);
+        if (!existing) {
+          const card = buildPostCard(change.doc);
+          const nextSibling = feedList.children[change.newIndex];
+          if (nextSibling) {
+            feedList.insertBefore(card, nextSibling);
+          } else {
+            feedList.appendChild(card);
+          }
+        }
       }
       if (change.type === 'modified') updatePostCard(change.doc);
       if (change.type === 'removed') removePostCard(change.doc.id);
