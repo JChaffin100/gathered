@@ -45,6 +45,35 @@
   <!-- ── Toast Region (ARIA live) ────────────────────────────────────────── -->
   <div id="toast-region" aria-live="polite" aria-atomic="true" role="status"></div>
 
+  <!-- Install Prompt Banner -->
+  <div id="install-banner" class="hidden" role="complementary" aria-label="Install app">
+    <div id="install-banner-inner">
+      <img src="icons/icon-192.png" alt="" width="40" height="40" />
+      <div id="install-banner-text">
+        <strong>Add Gathered to Home Screen</strong>
+        <span>Works offline — like a native app!</span>
+      </div>
+      <button id="install-btn" class="btn btn-primary">Install</button>
+      <button id="install-dismiss-btn" class="icon-btn" aria-label="Dismiss">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- iOS Install Instruction Banner -->
+  <div id="ios-install-banner" class="hidden" role="complementary" aria-label="iOS install instructions">
+    <div id="ios-install-banner-inner">
+      <span>Tap <strong>Share</strong> then <strong>"Add to Home Screen"</strong> to install Gathered.</span>
+      <button id="ios-install-dismiss-btn" class="icon-btn" aria-label="Dismiss">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
   <!-- ══════════════════════════════════════════════════════════════════════
        SCREEN: Auth (Sign-in)
   ══════════════════════════════════════════════════════════════════════ -->

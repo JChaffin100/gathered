@@ -463,3 +463,75 @@ textarea {
 .empty-state-icon { font-size: 48px; line-height: 1; }
 .empty-state h2   { font-size: 18px; font-weight: 600; color: var(--text-primary); }
 .empty-state p    { font-size: 14px; }
+
+/* ── PWA Install Banners ────────────────────────────────────────────────── */
+#install-banner, #ios-install-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  border-bottom: 1px solid var(--border);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+#install-banner.hidden, #ios-install-banner.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#install-banner-inner, #ios-install-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+}
+
+#install-banner-inner img {
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+#install-banner-text {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+#install-banner-text strong {
+  font-size: 15px;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+#install-banner-text span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+#install-btn {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+#ios-install-banner-inner span {
+  flex-grow: 1;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+#install-dismiss-btn, #ios-install-dismiss-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
