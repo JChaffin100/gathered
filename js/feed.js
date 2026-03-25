@@ -415,6 +415,7 @@ function openFullscreen(src, alt) {
       translateX = 0; translateY = 0;
       img.style.transform = '';
     }
+    viewer._pzReset = resetTransform;
 
     function getDistance(touches) {
       const dx = touches[0].clientX - touches[1].clientX;
@@ -470,7 +471,8 @@ function openFullscreen(src, alt) {
 
   // Reset zoom whenever a new image opens
   const img = viewer.querySelector('img');
-  img.style.transform = '';
+  if (viewer._pzReset) viewer._pzReset();
+  else { img.style.transform = ''; }
   img.src = src;
   img.alt = alt;
   viewer.classList.add('open');
