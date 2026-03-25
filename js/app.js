@@ -328,7 +328,7 @@ function showJoinGroupSheet() {
     const group = await findGroupByToken(token);
     if (!group) { showToast('Invalid or expired invite link.', 'error'); return; }
 
-    const ok = await joinGroup(group.id);
+    const ok = await joinGroup(group);
     if (ok) {
       closeSheet('add-group-backdrop');
       const userSnap = await getDoc(doc(db, 'users', _currentUser.uid));
@@ -385,7 +385,7 @@ function showJoinConfirmScreen(group) {
     </div>`;
 
   document.getElementById('join-confirm-btn')?.addEventListener('click', async () => {
-    const ok = await joinGroup(group.id);
+    const ok = await joinGroup(group);
     if (ok) {
       const userSnap = await getDoc(doc(db, 'users', auth.currentUser?.uid));
       const groupIds = userSnap?.data()?.groupIds || [];

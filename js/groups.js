@@ -88,18 +88,12 @@ export async function findGroupByToken(token) {
 }
 
 // ── Join Group ────────────────────────────────────────────────────────────
-export async function joinGroup(groupId) {
+export async function joinGroup(group) {
   const user = auth.currentUser;
   if (!user) return false;
 
   try {
-    const groupRef = doc(db, 'groups', groupId);
-    const groupSnap = await getDoc(groupRef);
-    if (!groupSnap.exists()) {
-      showToast('This group no longer exists.', 'error');
-      return false;
-    }
-    const group = groupSnap.data();
+    const groupRef = doc(db, 'groups', group.id);
     if (group.members && group.members[user.uid]) {
       showToast("You're already in this group!", 'info');
       return true;
@@ -118,10 +112,10 @@ export async function joinGroup(groupId) {
     });
 
     const userRef = doc(db, 'users', user.uid);
-    await updateDoc(userRef, { groupIds: arrayUnion(groupId) });
+    await updateDoc(userRef, { groupIds: arrayUnion(group.id) });
 
     showToast(`Joined ${group.name}!`, 'success');
-    return true;
+    return group.id;
   } catch (err) {
     console.error('joinGroup error:', err);
     showToast('Could not join group. Try again.', 'error');
