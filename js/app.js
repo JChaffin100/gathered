@@ -8,7 +8,7 @@ import { openCreatePost, openPostDetail as _openPostDetail } from './post.js';
 import { getUserGroups, findGroupByToken, joinGroup, renderGroupSettings } from './groups.js';
 import { showToast, openSheet, closeSheet } from './utils.js';
 import { db } from '../firebase-config.js';
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { doc, getDoc, collection, query, orderBy, limit, where, getDocs, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ── State ─────────────────────────────────────────────────────────────────
 let _currentUser   = null;
@@ -121,6 +121,7 @@ async function onSignedIn(user) {
   // Fetch user's groups
   const userSnap = await getDoc(doc(db, 'users', user.uid)).catch(() => null);
   const groupIds = userSnap?.data()?.groupIds || [];
+  window._currentUserData = userSnap?.data() || {};
   _userGroups = await getUserGroups(groupIds);
 
   // Show bottom nav
@@ -139,6 +140,8 @@ async function onSignedIn(user) {
     const isAdmin = g.members?.[user.uid]?.role === 'admin';
     setGroupAdminCache(g.id, user.uid, isAdmin);
   });
+
+  fetchUnreadBadges(); // Evaluate badges after auth
 
   showScreen('feed');
   if (_activeGroupId) {
@@ -231,14 +234,83 @@ function renderGroupSwitcher() {
 
   switcher.querySelectorAll('.group-chip[data-group-id]').forEach((chip) => {
     chip.addEventListener('click', () => {
-      _activeGroupId = chip.dataset.groupId;
-      renderGroupSwitcher();
-      subscribeFeed(_activeGroupId);
-      updateGearVisibility();
+      if (_activeGroupId !== chip.dataset.groupId) {
+        _activeGroupId = chip.dataset.groupId;
+        renderGroupSwitcher();
+        subscribeFeed(_activeGroupId);
+        updateGearVisibility();
+        clearBadge(_activeGroupId); // Clear badge specifically when swapping directly
+      }
     });
   });
 
   document.getElementById('add-group-chip')?.addEventListener('click', () => showAddGroupSheet());
+}
+
+// ── Unread Badges Logic ───────────────────────────────────────────────────
+async function fetchUnreadBadges() {
+  if (!_currentUser || !_userGroups.length) return;
+  const activity = window._currentUserData?.groupActivity || {};
+
+  for (const group of _userGroups) {
+    const lastSeen = activity[group.id]?.lastSeenAt;
+    let hasUnread = false;
+
+    if (!lastSeen) {
+      hasUnread = true;
+    } else {
+      // 1. New posts check
+      const qPosts = query(collection(db, 'groups', group.id, 'posts'), orderBy('createdAt', 'desc'), limit(1));
+      const postSnap = await getDocs(qPosts).catch(()=>null);
+      if (postSnap && !postSnap.empty) {
+        const latestPostTime = postSnap.docs[0].data().createdAt;
+        if (latestPostTime && latestPostTime.toMillis() > lastSeen.toMillis()) hasUnread = true;
+      }
+      
+      // 2. Personal engagements on old posts check
+      if (!hasUnread) {
+        const qEngs = query(
+          collection(db, 'groups', group.id, 'posts'),
+          where('authorId', '==', _currentUser.uid),
+          where('lastEngagedAt', '>', lastSeen),
+          limit(1)
+        );
+        const engSnap = await getDocs(qEngs).catch(()=>null);
+        if (engSnap && !engSnap.empty) hasUnread = true;
+      }
+    }
+
+    if (hasUnread) {
+      if (group.id === _activeGroupId) {
+        showToast('New activity in this group since you left!', 'success');
+        clearBadge(group.id); // Autoclear if they booted directly into it
+      } else {
+        const chip = document.querySelector(`.group-chip[data-group-id="${group.id}"]`);
+        if (chip && !chip.querySelector('.unread-dot')) {
+          chip.insertAdjacentHTML('beforeend', '<div class="unread-dot"></div>');
+        }
+      }
+    }
+  }
+}
+
+function clearBadge(groupId) {
+  if (!_currentUser) return;
+  updateDoc(doc(db, 'users', _currentUser.uid), {
+    [`groupActivity.${groupId}.lastSeenAt`]: serverTimestamp()
+  }).catch(() => {});
+  
+  // Fake local cache bump to prevent instant respawning
+  if (!window._currentUserData) window._currentUserData = {};
+  if (!window._currentUserData.groupActivity) window._currentUserData.groupActivity = {};
+  if (!window._currentUserData.groupActivity[groupId]) window._currentUserData.groupActivity[groupId] = {};
+  window._currentUserData.groupActivity[groupId].lastSeenAt = { toMillis: () => Date.now() + 10000 };
+  
+  const chip = document.querySelector(`.group-chip[data-group-id="${groupId}"]`);
+  if (chip) {
+    const dot = chip.querySelector('.unread-dot');
+    if (dot) dot.remove();
+  }
 }
 
 // ── Gear icon visibility ──────────────────────────────────────────────────

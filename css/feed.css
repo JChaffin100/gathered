@@ -13,6 +13,7 @@
 .group-switcher::-webkit-scrollbar { display: none; }
 
 .group-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -33,6 +34,22 @@
 .group-chip.active {
   background: linear-gradient(135deg, var(--brand-start), var(--brand-mid), var(--brand-end));
   color: #fff;
+}
+
+.unread-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: var(--danger, #e53935);
+  border-radius: 50%;
+  border: 2px solid var(--surface-2);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+.group-chip.active .unread-dot {
+  border-color: var(--brand-end, #3a4fd4);
 }
 
 .group-chip-add {

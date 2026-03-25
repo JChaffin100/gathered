@@ -269,7 +269,7 @@ async function toggleReaction(postId, type, clickedBtn) {
 
     // Add new reaction
     await setDoc(reactionRef, { userId: user.uid, type, createdAt: serverTimestamp() });
-    await updateDoc(postRef, { [`reactionCounts.${type}`]: increment(1) });
+    await updateDoc(postRef, { [`reactionCounts.${type}`]: increment(1), lastEngagedAt: serverTimestamp() });
 
     if (card) {
       card.querySelectorAll('.reaction-btn').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });

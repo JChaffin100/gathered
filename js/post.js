@@ -212,6 +212,7 @@ async function submitComment(postId, groupId, textarea, sendBtn) {
     });
     await updateDoc(doc(db, 'groups', groupId, 'posts', postId), {
       commentCount: increment(1),
+      lastEngagedAt: serverTimestamp(),
     });
     textarea.value = '';
   } catch (err) {
@@ -260,7 +261,7 @@ async function detailToggleReaction(postId, groupId, type, clickedBtn, container
       if (oldType === type) return;
     }
     await fbSetDoc(reactionRef, { userId: user.uid, type, createdAt: fbServerTimestamp() });
-    await fbUpdateDoc(postRef, { [`reactionCounts.${type}`]: fbIncrement(1) });
+    await fbUpdateDoc(postRef, { [`reactionCounts.${type}`]: fbIncrement(1), lastEngagedAt: fbServerTimestamp() });
     container.querySelectorAll('.reaction-btn').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
     clickedBtn.classList.add('active'); clickedBtn.setAttribute('aria-pressed', 'true');
     const c = parseInt(clickedBtn.querySelector('.reaction-count').textContent, 10);
