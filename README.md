@@ -4,6 +4,8 @@
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-blue)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 
+> **Note:** This guide was last verified working in March 2026. Firebase has changed its pricing and setup requirements significantly in recent years — if something doesn't match these instructions, check the Firebase Console carefully as the UI and requirements may have changed.
+
 ---
 
 ## What is Gathered?
@@ -55,12 +57,15 @@ If someone sent you an invite link, just open it in your browser. Sign in with G
 
 ## For Developers: Self-Hosting Your Own Instance
 
-Anyone can host their own private Gathered instance for free using GitHub Pages and Firebase's free Spark tier. This guide prioritizes security — your Firebase credentials are stored as encrypted GitHub Secrets and never committed to the repository.
+Anyone can host their own private Gathered instance for free using Firebase Hosting and Firebase's free Spark tier. This guide prioritizes security — your Firebase credentials are stored as encrypted GitHub Secrets and never committed to the repository. Deployment is fully automated via GitHub Actions.
 
 **What you'll need:**
 - A free [GitHub account](https://github.com)
 - A free [Google account](https://accounts.google.com) (for Firebase)
-- About 30 minutes
+- [Node.js](https://nodejs.org) installed on your computer (for the Firebase CLI)
+- About 45 minutes
+
+**Important:** This app uses Firebase Hosting — not GitHub Pages. Firebase Hosting is required because Google Sign-In uses a redirect flow that depends on the app and the auth handler being on the same domain. GitHub Pages does not support this correctly due to browser third-party cookie and storage restrictions.
 
 ---
 
@@ -68,7 +73,7 @@ Anyone can host their own private Gathered instance for free using GitHub Pages 
 
 1. Click **Fork** at the top of this repository page
 2. Give it any name (e.g. `gathered-myfamily`)
-3. Keep it **Public** — required for free GitHub Pages and free GitHub Actions
+3. Keep it **Public** — required for free GitHub Actions
 
 ---
 
@@ -81,23 +86,32 @@ Anyone can host their own private Gathered instance for free using GitHub Pages 
 4. Disable Google Analytics (not needed) → **Create project**
 5. Wait for project creation → Click **Continue**
 
-#### 2b. Enable Google Sign-In
+#### 2b. Upgrade to Blaze (pay-as-you-go) plan
+Firebase Storage now requires the Blaze plan to provision a new bucket. The free usage quota still applies — you will not be charged unless you exceed the free limits.
+
+1. In the Firebase Console left sidebar, click **"Spark"** at the bottom
+2. Click **"Upgrade to Blaze"**
+3. Link a credit card (required, but not charged within free limits)
+4. When prompted, set up a **budget alert at $5** — this protects you from unexpected charges
+
+#### 2c. Enable Google Sign-In
 1. In the left sidebar: **Build → Authentication**
 2. Click **"Get started"**
 3. Under **Sign-in method**, click **Google**
 4. Toggle **Enable** to on
 5. Enter a support email (your email address) → **Save**
 
-#### 2c. Create a Firestore Database
+#### 2d. Create a Firestore Database
 1. In the left sidebar: **Build → Firestore Database**
 2. Click **"Create database"**
 3. Select **"Start in production mode"** → Next
-4. Choose a region close to your users (e.g. `us-central`) → **Enable**
-5. Once created, click the **Rules** tab
-6. Replace the existing rules with the full contents of `firestore.rules` from this repo
-7. Click **Publish**
+4. Choose a region close to your users — **important:** for Storage free tier, choose `us-central`, `us-east1`, or `us-west1`
+5. Click **Enable**
+6. Once created, click the **Rules** tab
+7. Replace the existing rules with the full contents of `firestore.rules` from this repo
+8. Click **Publish**
 
-#### 2d. Enable Firebase Storage
+#### 2e. Enable Firebase Storage
 1. In the left sidebar: **Build → Storage**
 2. Click **"Get started"**
 3. Select **"Start in production mode"** → Next
@@ -106,196 +120,167 @@ Anyone can host their own private Gathered instance for free using GitHub Pages 
 6. Replace the existing rules with the full contents of `storage.rules` from this repo
 7. Click **Publish**
 
-#### 2e. Register a Web App and get your config
+#### 2f. Register a Web App and get your config
 1. Click the **⚙️ gear icon** next to "Project Overview" → **Project settings**
 2. Scroll down to **"Your apps"** section
 3. Click the **web icon** (`</>`)
 4. Enter an app nickname (e.g. `gathered-web`) → **Register app**
-5. You will see a `firebaseConfig` object — **copy and save these values somewhere safe** (a password manager works well). You will need them in Step 4.
-6. Click **Continue to console**
+5. On the next screen, select **"Use a `<script>` tag"** (not npm)
+6. Copy the values inside the `firebaseConfig` object and save them somewhere safe (a password manager works well). You will need them in Step 4.
+7. Click **Continue to console**
 
-#### 2f. Authorize your GitHub Pages domain
+#### 2g. Enable Firebase Hosting
+1. In the left sidebar: **Build → Hosting**
+2. Click **"Get started"** and follow the prompts
+3. You do not need to install anything — just click through to complete setup
+4. Your app will be hosted at `https://YOUR-PROJECT-ID.web.app`
+
+#### 2h. Set your authDomain to your web.app URL
+This is critical. Firebase Auth must use your Firebase Hosting domain, not the default `firebaseapp.com` domain, to avoid browser cross-origin storage restrictions that break sign-in.
+
+In Step 4 when you add your secrets, use your `YOUR-PROJECT-ID.web.app` URL as the `authDomain` value — **not** the `firebaseapp.com` URL from your Firebase config.
+
+#### 2i. Authorize your domains for Google Sign-In
+
+**In Firebase Console:**
 1. Go to **Build → Authentication → Settings → Authorized domains**
-2. Click **"Add domain"**
-3. Enter your GitHub Pages domain: `YOUR-USERNAME.github.io`
-4. Click **Add**
+2. Add `YOUR-PROJECT-ID.web.app`
+
+**In Google Cloud Console:**
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → select your project (look under "No Organization" if you don't see it)
+2. Go to **APIs & Services → Credentials**
+3. Click on **"Web client (auto created by Google Service)"**
+4. Under **Authorized JavaScript origins**, add:
+   - `https://YOUR-PROJECT-ID.web.app`
+5. Under **Authorized redirect URIs**, add:
+   - `https://YOUR-PROJECT-ID.web.app/__/auth/handler`
+6. Click **Save** — note that changes can take up to a few hours to propagate
 
 ---
 
 ### Step 3 — Harden Your Firebase Security
 
-These steps protect your Firebase project even if your config values are ever seen by someone else. Do not skip them.
+#### 3a. Restrict your API key to your domain
 
-#### 3a. Restrict your API key to your domain only
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → your project
+2. **APIs & Services → Credentials**
+3. Click **"Browser key (auto created by Firebase)"**
+4. Under **Application restrictions**, select **"Websites"**
+5. Add `https://YOUR-PROJECT-ID.web.app/*`
+6. Also add `https://YOUR-PROJECT-ID.firebaseapp.com/*` — Firebase Auth uses this domain internally during sign-in and will break without it
+7. Click **Save**
 
-Your Firebase `apiKey` is not a traditional secret, but restricting it to your domain means it cannot be used from any other website or script.
-
-1. Go to [console.cloud.google.com](https://console.cloud.google.com)
-2. Make sure your Firebase project is selected in the top project dropdown
-3. In the left sidebar: **APIs & Services → Credentials**
-4. Under **API Keys**, click on your key (named something like "Browser key (auto created by Firebase)")
-5. Under **Application restrictions**, select **"Websites"**
-6. Click **"Add an item"** and enter: `https://YOUR-USERNAME.github.io/*`
-7. Click **Done** → **Save**
-
-Now your API key will be rejected if anyone tries to use it from a different domain.
+> ⚠️ If sign-in stops working after adding the restriction, verify both domains are listed. The `firebaseapp.com` domain is required even though your app is hosted on `web.app`.
 
 #### 3b. Enable Firebase App Check
 
-App Check enforces that only your app — running on your approved domain — can access your Firebase project. Even if someone copies your config values, they cannot use them from their own site.
-
-1. In the Firebase Console left sidebar: **Build → App Check**
-2. Click **"Get started"**
-3. Select your web app from the list
-4. Under **reCAPTCHA v3**, click **"Manage"**
-5. Follow the link to the [Google reCAPTCHA Admin Console](https://www.google.com/recaptcha/admin)
-6. Click **"+"** to register a new site
-   - Label: `Gathered`
-   - reCAPTCHA type: **Score based (v3)**
-   - Domain: `YOUR-USERNAME.github.io`
-   - Accept the terms → **Submit**
-7. Copy the **Site Key** shown
-8. Return to Firebase App Check, paste the Site Key in → **Save**
-9. Back in the App Check overview, click **"Enforce"** next to both **Firestore** and **Storage**
-
-> ⚠️ **Before enforcing:** make sure your app is deployed and working (complete Steps 4–6 first). Enforcing App Check on a misconfigured app will lock everyone out, including you. You can always enforce it after confirming the app works.
+1. In the Firebase Console: **Build → App Check**
+2. Click **"Get started"** → select your web app
+3. Under **reCAPTCHA v3**, follow the link to the [Google reCAPTCHA Admin Console](https://www.google.com/recaptcha/admin)
+4. Register a new site:
+   - Type: **Score based (v3)**
+   - Domain: `YOUR-PROJECT-ID.web.app`
+5. Copy the **Secret Key** (not the Site Key)
+6. Paste it into Firebase App Check → **Save**
+7. After deployment is confirmed working, click **"Enforce"** next to Firestore and Storage
 
 #### 3c. Set a billing budget alert
 
-This ensures you receive an email warning if usage ever approaches a chargeable level, giving you time to investigate before any cost is incurred.
-
 1. Go to [console.cloud.google.com/billing](https://console.cloud.google.com/billing)
-2. Select your project's billing account
-3. Click **Budgets & alerts** in the left sidebar
-4. Click **"Create budget"**
-5. Set a budget amount of `$5`
-6. Set alert thresholds at **50%** and **100%**
-7. Make sure your email is listed under notification recipients
-8. Click **Finish**
-
-Firebase's free Spark tier does not charge you anything under normal family use, but this alert acts as an early warning system if something unexpected happens.
+2. Select your project's billing account → **Budgets & alerts**
+3. Create a budget at `$5` with alerts at 50% and 100%
 
 ---
 
-### Step 4 — Add Firebase Config as GitHub Secrets
+### Step 4 — Add Secrets to GitHub
 
-Your Firebase config values live in GitHub's encrypted secret store — they are never written to any file in your repository and are not visible to anyone after you save them, including you.
+1. Go to your forked repository → **Settings → Secrets and variables → Actions**
+2. Add each of the following secrets:
 
-1. Go to your forked repository on GitHub
-2. Click **Settings → Secrets and variables → Actions**
-3. Click **"New repository secret"** and add each of the following:
-
-| Secret name | Where to find the value |
+| Secret name | Value |
 |---|---|
 | `FIREBASE_API_KEY` | `apiKey` from your Firebase config |
-| `FIREBASE_AUTH_DOMAIN` | `authDomain` from your Firebase config |
-| `FIREBASE_PROJECT_ID` | `projectId` from your Firebase config |
+| `FIREBASE_PROJECT_ID` | `projectId` from your Firebase config (all lowercase) |
 | `FIREBASE_STORAGE_BUCKET` | `storageBucket` from your Firebase config |
 | `FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` from your Firebase config |
 | `FIREBASE_APP_ID` | `appId` from your Firebase config |
+| `FIREBASE_TOKEN` | Generated in the next step |
 
-Secret names are **case-sensitive** — type them exactly as shown above. If you lose the values, you can retrieve them again from the Firebase Console (⚙️ → Project settings → Your apps).
+**To generate your `FIREBASE_TOKEN`:**
+1. Install the Firebase CLI: `npm install -g firebase-tools`
+2. Run: `firebase login:ci`
+3. Sign in with Google in the browser that opens
+4. Copy the token printed in the terminal — that is your `FIREBASE_TOKEN`
 
----
-
-### Step 5 — Enable GitHub Actions Deployment
-
-GitHub Actions will automatically build and deploy your app every time you push to `main`. Your Firebase config is injected from your encrypted secrets at build time — it is never stored in the repository.
-
-#### 5a. Configure GitHub Pages to use Actions
-
-1. In your repository: **Settings → Pages**
-2. Under **Source**, select **"GitHub Actions"**
-3. Click **Save**
-
-#### 5b. Grant Actions permission to deploy
-
-1. In your repository: **Settings → Actions → General**
-2. Scroll to **"Workflow permissions"**
-3. Select **"Read and write permissions"**
-4. Check **"Allow GitHub Actions to create and approve pull requests"**
-5. Click **Save**
-
-#### 5c. About the workflow file
-
-The file `.github/workflows/deploy.yml` is already in the repository. It is safe to view and safe to commit publicly — it contains only references like `${{ secrets.FIREBASE_API_KEY }}`, never the actual values. When the workflow runs, GitHub substitutes the real values in memory on its build server. The values are never logged or stored anywhere.
-
-#### 5d. Trigger your first deployment
-
-1. Make any small edit to a file (e.g. update a line in README.md)
-2. Commit and push to `main`
-3. Go to your repository → **Actions** tab
-4. You will see a workflow run appear — click it to watch the progress
-5. Once it shows a green checkmark (usually under 60 seconds), your app is live
-
-Your app is now available at: `https://YOUR-USERNAME.github.io/REPO-NAME/`
+> **Important:** The `authDomain` secret is intentionally omitted from the table. The workflow file hard-codes it as `YOUR-PROJECT-ID.web.app` because using the Firebase config's default `firebaseapp.com` value breaks Google Sign-In due to browser cross-origin storage restrictions. Update the `authDomain` line in `.github/workflows/deploy.yml` with your actual project ID.
 
 ---
 
-### Step 6 — Update Paths for Your Subdirectory
+### Step 5 — Configure and Trigger Deployment
 
-If your app lives at `username.github.io/gathered/` rather than a root custom domain, update two files:
+#### 5a. Update the workflow file
 
-**manifest.json** — change `start_url`:
-```json
-"start_url": "/gathered/"
-```
+Open `.github/workflows/deploy.yml` in your repo and find this line:
 
-**sw.js** — prefix every path in `APP_SHELL` with `/gathered/`:
 ```javascript
-const APP_SHELL = [
-  '/gathered/',
-  '/gathered/index.html',
-  '/gathered/manifest.json',
-  // ... every other file, with the /gathered/ prefix
-];
+authDomain: "YOUR-PROJECT-ID.web.app",
 ```
 
-Commit and push — the workflow redeploys automatically.
+Replace `YOUR-PROJECT-ID` with your actual Firebase project ID (e.g. `gathered-myfamily`).
+
+#### 5b. Initialize Firebase Hosting locally (one time only)
+
+In your terminal, navigate to your project folder and run:
+
+```
+firebase login
+firebase init hosting
+```
+
+When prompted:
+- Select your Firebase project
+- Public directory: `.` (single dot)
+- Single-page app: `yes`
+- Overwrite index.html: **no**
+
+This creates `firebase.json` and `.firebaserc` which the deploy workflow needs.
+
+#### 5c. Commit and push
+
+Commit all your changes and push to `main`. The GitHub Actions workflow will run automatically.
+
+Go to your repository → **Actions** tab to watch the deployment. It typically takes 1–2 minutes. When it shows a green checkmark, your app is live at `https://YOUR-PROJECT-ID.web.app`.
 
 ---
 
-### Step 7 — Enforce App Check (if you deferred it)
-
-If you skipped enforcing App Check in Step 3b, now is the time:
-
-1. Confirm your app is working correctly end-to-end
-2. Go to **Firebase Console → Build → App Check**
-3. Click **"Enforce"** next to Firestore and Storage
-4. Test the app once more — sign in, post a photo, confirm everything still works
-
-Once App Check is enforced, any request that doesn't originate from your approved domain will be blocked at the Firebase level, regardless of whether the caller has your config values.
-
----
-
-### Step 8 — Verify Everything Works
+### Step 6 — Verify Everything Works
 
 Run through this checklist before sharing the link with family:
 
-- [ ] App loads at your GitHub Pages URL
-- [ ] Sign in with Google works
+- [ ] App loads at `https://YOUR-PROJECT-ID.web.app`
+- [ ] Sign in with Google works (you are taken to the feed, not returned to sign-in)
 - [ ] You can create a group
 - [ ] The invite link works (open it in an incognito window and join)
 - [ ] You can post a photo
-- [ ] The photo appears in the feed in real time
+- [ ] The photo appears in the feed
 - [ ] Reactions and comments work
 - [ ] You can edit a post caption
 - [ ] Install to home screen works on your phone (iOS: Safari; Android: Chrome)
-- [ ] App loads previously seen content when offline
-- [ ] App Check is enforced on Firestore and Storage
-- [ ] Budget alert email is set up
+- [ ] App Check is enforced on Firestore and Storage (after confirming above works)
+- [ ] Budget alert is set up
 
 ---
 
-### Firebase Free Tier Limits (Spark Plan)
+### Firebase Free Tier Limits (Blaze plan, free quota)
 
 | Resource | Free limit |
 |---|---|
 | Firestore storage | 1 GB |
 | Firestore reads | 50,000 / day |
 | Firestore writes | 20,000 / day |
-| Firebase Storage | 5 GB total |
+| Firebase Storage | 5 GB total (US regions only) |
 | Storage downloads | 1 GB / day |
+| Firebase Hosting | 10 GB storage, 360 MB/day transfer |
 | GitHub Actions (public repo) | Unlimited — free |
 
 For a family group of 10–20 people sharing casual photos, these limits are typically sufficient indefinitely. Gathered compresses photos before upload (targeting under 500 KB each), giving roughly 10,000 photos before hitting the 5 GB storage limit.
@@ -304,23 +289,30 @@ For a family group of 10–20 people sharing casual photos, these limits are typ
 
 ### Troubleshooting
 
-**The Actions workflow fails**
-Check the Actions tab for the specific error. The most common cause is a mistyped secret name — they are case-sensitive. Verify each name matches the table in Step 4 exactly.
+**Sign-in returns to the sign-in screen without logging in**
+This is the most common issue and has several possible causes:
+- The `authDomain` in your config is set to `firebaseapp.com` instead of `web.app`. Update `.github/workflows/deploy.yml` to use `YOUR-PROJECT-ID.web.app`.
+- Your `web.app` domain is not in Firebase's Authorized domains list (Step 2i).
+- Your `web.app` domain is not in the OAuth client's Authorized JavaScript origins (Step 2i).
+- Changes to OAuth credentials can take up to a few hours to propagate — wait and try again.
 
-**"Permission denied" errors in the app**
-Your Firestore or Storage security rules may not have saved correctly. Re-open the Rules tab for each service, re-paste the contents of `firestore.rules` and `storage.rules`, and click Publish.
+**"Access blocked: redirect_uri_mismatch"**
+The `https://YOUR-PROJECT-ID.web.app/__/auth/handler` URI is missing from your OAuth client's Authorized redirect URIs. Add it in Google Cloud Console → APIs & Services → Credentials.
 
-**"This domain is not authorized" on sign-in**
-Your GitHub Pages domain is not in Firebase's authorized domains list. Go to **Build → Authentication → Settings → Authorized domains** and add `YOUR-USERNAME.github.io`.
+**GitHub Actions workflow fails with "Invalid project id"**
+The `FIREBASE_PROJECT_ID` secret has incorrect formatting. It must be all lowercase with no spaces. Edit the secret and re-enter the value exactly as it appears in your Firebase Console URL.
 
-**App installs but shows a blank screen**
-The `start_url` in `manifest.json` or the cached paths in `sw.js` do not match your subdirectory. Follow Step 6.
+**"Missing or insufficient permissions" in the app**
+Your Firestore security rules are not matching correctly. Go to Firebase Console → Firestore → Rules and verify the rules match `firestore.rules` from this repo exactly. Click Publish after any changes and wait 30 seconds before testing.
 
-**Photos upload but don't appear**
-Check the browser console for errors. Most likely the Storage rules were not published correctly (Step 2d) or App Check is blocking requests before your domain was registered.
+**Firebase Storage requires upgrading**
+Firebase now requires the Blaze (pay-as-you-go) plan to use Storage. Upgrade in the Firebase Console — no charges apply within the free quota. Set a $5 budget alert as a safeguard.
 
-**App Check is blocking legitimate requests**
-Make sure your GitHub Pages domain is registered in the reCAPTCHA Admin Console and in Firebase App Check. Double-check that the Site Key was entered correctly. You can temporarily switch App Check from "Enforce" to "Monitor" mode to diagnose without locking users out.
+**Photos upload but posts don't appear in the feed**
+Check the browser console for Firestore permission errors. Verify your Firestore rules are published correctly and that the user is a member of the group they're posting to.
+
+**App installs but shows a blank screen after PWA install**
+Clear the service worker cache: in Chrome, open DevTools → Application → Service Workers → click Unregister. Then reload the page.
 
 ---
 
