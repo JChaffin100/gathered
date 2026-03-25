@@ -77,14 +77,25 @@ async function init() {
 
   // Pull-to-refresh (simple implementation)
   setupPullToRefresh();
-
-  // PWA Install Prompt setup
-  setupPWAInstallPrompt();
 }
 
 // ── PWA Install Prompt ────────────────────────────────────────────────────
-function setupPWAInstallPrompt() {
-  let deferredPrompt;
+let _deferredPrompt = null;
+const _dismissed = localStorage.getItem('gathered_pwa_dismissed') === 'true';
+
+// 1. MUST BE SYNCHRONOUS: Catch the event before 'await' fetches or auth delays
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredPrompt = e;
+  
+  if (!_dismissed) {
+    const installBanner = document.getElementById('install-banner');
+    if (installBanner) installBanner.classList.remove('hidden');
+  }
+});
+
+// Setup click handlers asynchronously later (called immediately here)
+setTimeout(() => {
   const installBanner = document.getElementById('install-banner');
   const installBtn = document.getElementById('install-btn');
   const dismissBtn = document.getElementById('install-dismiss-btn');
@@ -92,24 +103,13 @@ function setupPWAInstallPrompt() {
   const iosBanner = document.getElementById('ios-install-banner');
   const iosDismissBtn = document.getElementById('ios-install-dismiss-btn');
 
-  // Check custom dismissed state
-  const dismissed = localStorage.getItem('gathered_pwa_dismissed') === 'true';
-
-  // Standard PWA prompt (Android/Desktop Chrome)
-  window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent the mini-infobar from appearing on mobile
-    e.preventDefault();
-    deferredPrompt = e;
-    if (!dismissed) installBanner?.classList.remove('hidden');
-  });
-
   installBtn?.addEventListener('click', async () => {
     installBanner.classList.add('hidden');
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    if (!_deferredPrompt) return;
+    _deferredPrompt.prompt();
+    const { outcome } = await _deferredPrompt.userChoice;
     console.log(`User response to the install prompt: ${outcome}`);
-    deferredPrompt = null;
+    _deferredPrompt = null;
   });
 
   dismissBtn?.addEventListener('click', () => {
@@ -118,12 +118,10 @@ function setupPWAInstallPrompt() {
   });
 
   // Detect iOS Safari for manual instructions
-  // Check if device is iOS and NOT already running in standalone mode
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   
-  if (isIOS && !isStandalone && !dismissed) {
-    // Show iOS instruction banner (delay slightly so it doesn't fight other load animations)
+  if (isIOS && !isStandalone && !_dismissed) {
     setTimeout(() => iosBanner?.classList.remove('hidden'), 1000);
   }
 
@@ -132,13 +130,12 @@ function setupPWAInstallPrompt() {
     localStorage.setItem('gathered_pwa_dismissed', 'true');
   });
 
-  // Hide banners strictly once installed
   window.addEventListener('appinstalled', () => {
     installBanner?.classList.add('hidden');
     iosBanner?.classList.add('hidden');
     console.log('Gathered was installed');
   });
-}
+}, 0);
 
 // ── Auth Callbacks ────────────────────────────────────────────────────────
 async function onSignedIn(user) {

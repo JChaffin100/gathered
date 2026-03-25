@@ -1,7 +1,7 @@
 // sw.js — Gathered Service Worker
 // Cache-first for app shell; pass-through for Firebase/Google APIs
 
-const CACHE_NAME = 'gathered-v13';
+const CACHE_NAME = 'gathered-v14';
 const APP_SHELL = [
   '/',
   '/index.html',
