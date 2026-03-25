@@ -80,21 +80,6 @@ async function init() {
 }
 
 // ── PWA Install Prompt ────────────────────────────────────────────────────
-let _deferredPrompt = null;
-const _dismissed = localStorage.getItem('gathered_pwa_dismissed') === 'true';
-
-// 1. MUST BE SYNCHRONOUS: Catch the event before 'await' fetches or auth delays
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  _deferredPrompt = e;
-  
-  if (!_dismissed) {
-    const installBanner = document.getElementById('install-banner');
-    if (installBanner) installBanner.classList.remove('hidden');
-  }
-});
-
-// Setup click handlers asynchronously later (called immediately here)
 setTimeout(() => {
   const installBanner = document.getElementById('install-banner');
   const installBtn = document.getElementById('install-btn');
@@ -105,25 +90,17 @@ setTimeout(() => {
 
   installBtn?.addEventListener('click', async () => {
     installBanner.classList.add('hidden');
-    if (!_deferredPrompt) return;
-    _deferredPrompt.prompt();
-    const { outcome } = await _deferredPrompt.userChoice;
+    if (!window._deferredPrompt) return;
+    window._deferredPrompt.prompt();
+    const { outcome } = await window._deferredPrompt.userChoice;
     console.log(`User response to the install prompt: ${outcome}`);
-    _deferredPrompt = null;
+    window._deferredPrompt = null;
   });
 
   dismissBtn?.addEventListener('click', () => {
     installBanner?.classList.add('hidden');
     localStorage.setItem('gathered_pwa_dismissed', 'true');
   });
-
-  // Detect iOS Safari for manual instructions
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  
-  if (isIOS && !isStandalone && !_dismissed) {
-    setTimeout(() => iosBanner?.classList.remove('hidden'), 1000);
-  }
 
   iosDismissBtn?.addEventListener('click', () => {
     iosBanner?.classList.add('hidden');

@@ -74,6 +74,29 @@
     </div>
   </div>
 
+  <!-- ── Catch Install Prompt Synchronously ────────────────────────────── -->
+  <script>
+    window._deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window._deferredPrompt = e;
+      if (localStorage.getItem('gathered_pwa_dismissed') !== 'true') {
+        const banner = document.getElementById('install-banner');
+        if (banner) banner.classList.remove('hidden');
+      }
+    });
+
+    // iOS Detection inline
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (isIOS && !isStandalone && localStorage.getItem('gathered_pwa_dismissed') !== 'true') {
+      setTimeout(() => {
+        const iosBanner = document.getElementById('ios-install-banner');
+        if (iosBanner) iosBanner.classList.remove('hidden');
+      }, 1000);
+    }
+  </script>
+
   <!-- ══════════════════════════════════════════════════════════════════════
        SCREEN: Auth (Sign-in)
   ══════════════════════════════════════════════════════════════════════ -->
