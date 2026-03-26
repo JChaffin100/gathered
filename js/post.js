@@ -274,10 +274,18 @@ async function detailToggleReaction(postId, groupId, type, clickedBtn, container
 
 // ── Create Post Sheet ─────────────────────────────────────────────────────
 let _selectedFiles = [];
+let _isProcessingPhotos = false;
 let _currentGroupId = null;
 
-export function openCreatePost(groupId, groups) {
+function clearSelectedPhotos() {
+  _selectedFiles.forEach((f) => {
+    if (f.tempUrl) URL.revokeObjectURL(f.tempUrl);
+    if (f.objectUrl) URL.revokeObjectURL(f.objectUrl);
+  });
   _selectedFiles = [];
+}
+export function openCreatePost(groupId, groups) {
+  clearSelectedPhotos();
   _currentGroupId = groupId;
   renderCreatePostSheet(groupId, groups);
   openSheet('create-post-backdrop');
@@ -343,7 +351,10 @@ function renderCreatePostSheet(groupId, groups) {
         message: 'Discard this post?',
         confirmLabel: 'Discard',
         danger: true,
-        onConfirm: () => closeSheet('create-post-backdrop'),
+        onConfirm: () => {
+          clearSelectedPhotos();
+          closeSheet('create-post-backdrop');
+        },
       });
     } else {
       closeSheet('create-post-backdrop');
@@ -363,24 +374,40 @@ function renderCreatePostSheet(groupId, groups) {
 }
 
 async function handleFileSelection(files) {
-  const newFiles = Array.from(files).filter((f) => {
+  const incoming = Array.from(files).filter((f) => {
     return f.type.startsWith('image/') || !f.type || f.type === 'application/octet-stream' || f.name.match(/\.(jpe?g|png|gif|webp|heic|heif)$/i);
   });
-  if (newFiles.length === 0) return;
-
-  const combined = [..._selectedFiles, ...newFiles.map((f) => ({ file: f, isReady: false }))].slice(0, 10);
-  _selectedFiles = combined;
-  renderThumbnails();
-
-  const nextBtn = document.getElementById('step1-next');
-  if (nextBtn) {
-    nextBtn.disabled = true;
-    nextBtn.textContent = 'Processing Photos...';
+  const spaceLeft = 10 - _selectedFiles.length;
+  if (spaceLeft <= 0) {
+    showToast('Maximum 10 photos reached.', 'warning');
+    return;
   }
 
-  for (let i = 0; i < _selectedFiles.length; i++) {
-    const item = _selectedFiles[i];
-    if (!item.isReady) {
+  const toPick = incoming.slice(0, spaceLeft);
+  if (incoming.length > spaceLeft) {
+    showToast('Limit 10 photos per post.', 'warning');
+  }
+
+  // Tag with unique IDs and generate ONE persistent temp URL to prevent leaks
+  const newItems = toPick.map((f) => ({
+    id: Math.random().toString(36).substring(2, 11),
+    file: f,
+    tempUrl: URL.createObjectURL(f),
+    isReady: false
+  }));
+
+  _selectedFiles = [..._selectedFiles, ...newItems];
+  renderThumbnails();
+
+  if (_isProcessingPhotos) return;
+  _isProcessingPhotos = true;
+
+  try {
+    // Keep processing until everything in the current array is ready
+    while (_selectedFiles.some(f => !f.isReady)) {
+      const item = _selectedFiles.find(f => !f.isReady);
+      if (!item) break;
+
       const compressed = await compressImage(item.file);
       if (compressed) {
         item.blob = compressed.blob;
@@ -389,13 +416,18 @@ async function handleFileSelection(files) {
         item.objectUrl = URL.createObjectURL(compressed.blob);
         item.isReady = true;
       } else {
-        _selectedFiles.splice(i, 1);
-        i--;
+        showToast(`Could not process ${item.file.name}`, 'error');
+        _selectedFiles = _selectedFiles.filter(f => f.id !== item.id);
+        if (item.tempUrl) URL.revokeObjectURL(item.tempUrl);
       }
+      renderThumbnails();
     }
+  } catch (err) {
+    console.error('Photo processing error:', err);
+  } finally {
+    _isProcessingPhotos = false;
+    renderThumbnails();
   }
-
-  renderThumbnails();
 }
 
 function renderThumbnails() {
@@ -405,17 +437,29 @@ function renderThumbnails() {
   if (!grid) return;
 
   grid.innerHTML = _selectedFiles.map((item, i) => {
-    const url = item.objectUrl || URL.createObjectURL(item.file);
+    const url = item.objectUrl || item.tempUrl;
     return `
       <div class="photo-thumb-wrap">
         <img class="photo-thumb" src="${url}" alt="Selected photo ${i + 1}" ${!item.isReady ? 'style="opacity:0.5"' : ''}>
-        <button class="photo-thumb-remove" aria-label="Remove photo ${i + 1}" data-index="${i}">✕</button>
+        <button class="photo-thumb-remove" aria-label="Remove photo ${i + 1}" data-id="${item.id}">✕</button>
       </div>`;
   }).join('');
 
+  const pickerArea = document.querySelector('.photo-picker-area');
+  if (pickerArea) {
+    pickerArea.style.display = _selectedFiles.length >= 10 ? 'none' : 'flex';
+  }
+
   grid.querySelectorAll('.photo-thumb-remove').forEach((btn) => {
     btn.addEventListener('click', () => {
-      _selectedFiles.splice(parseInt(btn.dataset.index, 10), 1);
+      const id = btn.dataset.id;
+      const index = _selectedFiles.findIndex(f => f.id === id);
+      if (index > -1) {
+        const item = _selectedFiles[index];
+        if (item.tempUrl) URL.revokeObjectURL(item.tempUrl);
+        if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+        _selectedFiles.splice(index, 1);
+      }
       renderThumbnails();
     });
   });
@@ -442,7 +486,7 @@ function showStep2() {
 
   const list = document.getElementById('photo-captions-list');
   list.innerHTML = _selectedFiles.map((item, i) => {
-    const url = item.objectUrl || URL.createObjectURL(item.file);
+    const url = item.objectUrl || item.tempUrl;
     return `
       <div class="photo-caption-item">
         <img class="photo-caption-thumb" src="${url}" alt="Photo ${i + 1}">
@@ -512,7 +556,7 @@ async function submitPost() {
     });
 
     showToast('Post shared!', 'success');
-    _selectedFiles = [];
+    clearSelectedPhotos();
     closeSheet('create-post-backdrop');
   } catch (err) {
     console.error('submitPost error:', err);
