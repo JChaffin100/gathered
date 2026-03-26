@@ -45,7 +45,13 @@ export async function renderOwnProfile(user, groups) {
       </div>
 
       <button class="btn-sign-out" id="sign-out-btn">Sign Out</button>
-      <div class="profile-app-version" id="app-version-display" style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:16px;">Version 1.0...</div>
+
+      <button class="btn btn-secondary btn-full" id="check-updates-btn" style="margin-top:24px; font-weight:600;">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="margin-right:8px"><path d="M21 2v6h-6M3 12a9 9 0 1 0 2-5L2 12M3 22v-6h6M21 12a9 9 0 1 0-2 5l3-5"/></svg>
+        Check for Updates
+      </button>
+
+      <div class="profile-app-version" id="app-version-display" style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:16px;margin-bottom:8px;">Version 1.0...</div>
     </div>
 
     <!-- Posts grid -->
@@ -76,6 +82,17 @@ export async function renderOwnProfile(user, groups) {
 
   document.getElementById('sign-out-btn')?.addEventListener('click', () => {
     signOutUser();
+  });
+
+  document.getElementById('check-updates-btn')?.addEventListener('click', async () => {
+    if ('serviceWorker' in navigator) {
+      showToast('Downloading updates...', 'success');
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.update().catch(()=>{});
+      setTimeout(() => window.location.reload(true), 1200);
+    } else {
+      window.location.reload(true);
+    }
   });
 
   // Fetch version from Service Worker organically
