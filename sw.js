@@ -1,7 +1,7 @@
 // sw.js — Gathered Service Worker
 // Cache-first for app shell; pass-through for Firebase/Google APIs
 
-const CACHE_NAME = 'gathered-v20';
+const CACHE_NAME = 'gathered-v21';
 const APP_SHELL = [
   './',
   './index.html',
@@ -20,6 +20,7 @@ const APP_SHELL = [
   './js/groups.js',
   './js/storage.js',
   './js/utils.js',
+  './js/search.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
@@ -44,7 +45,10 @@ const FONTS_HOSTS = [
 // ── Install ────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => {
+      // Force bypass of HTTP disk cache during install so the newest files are always fetched
+      return cache.addAll(APP_SHELL.map(url => new Request(url, { cache: 'reload' })));
+    })
   );
   self.skipWaiting();
 });
