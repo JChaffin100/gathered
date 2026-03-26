@@ -363,7 +363,9 @@ function renderCreatePostSheet(groupId, groups) {
 }
 
 async function handleFileSelection(files) {
-  const newFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+  const newFiles = Array.from(files).filter((f) => {
+    return f.type.startsWith('image/') || !f.type || f.type === 'application/octet-stream' || f.name.match(/\.(jpe?g|png|gif|webp|heic|heif)$/i);
+  });
   if (newFiles.length === 0) return;
 
   const combined = [..._selectedFiles, ...newFiles.map((f) => ({ file: f, isReady: false }))].slice(0, 10);

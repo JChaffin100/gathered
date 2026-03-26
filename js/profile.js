@@ -45,6 +45,7 @@ export async function renderOwnProfile(user, groups) {
       </div>
 
       <button class="btn-sign-out" id="sign-out-btn">Sign Out</button>
+      <div class="profile-app-version" id="app-version-display" style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:16px;">Version 1.0...</div>
     </div>
 
     <!-- Posts grid -->
@@ -76,6 +77,17 @@ export async function renderOwnProfile(user, groups) {
   document.getElementById('sign-out-btn')?.addEventListener('click', () => {
     signOutUser();
   });
+
+  // Fetch version from Service Worker organically
+  fetch('./sw.js')
+    .then(r => r.text())
+    .then(text => {
+      const match = text.match(/CACHE_NAME\s*=\s*['"]gathered-v(\d+)['"]/);
+      if (match) {
+        const v = document.getElementById('app-version-display');
+        if (v) v.textContent = 'Version 1.0.' + match[1];
+      }
+    }).catch(() => {});
 
   // Load posts grid
   await loadUserPostsGrid(user.uid, groups, 'profile-grid', null);

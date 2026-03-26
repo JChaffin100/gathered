@@ -247,64 +247,81 @@ function renderGroupSwitcher() {
   document.getElementById('add-group-chip')?.addEventListener('click', () => showAddGroupSheet());
 }
 
-// ── Unread Badges Logic ───────────────────────────────────────────────────
 async function fetchUnreadBadges() {
   if (!_currentUser || !_userGroups.length) return;
   const activity = window._currentUserData?.groupActivity || {};
 
   for (const group of _userGroups) {
-    const lastSeen = activity[group.id]?.lastSeenAt;
-    let hasUnread = false;
+    try {
+      let lastSeen = activity[group.id]?.lastSeenAt;
+      let hasUnread = false;
 
-    if (!lastSeen) {
-      hasUnread = true;
-    } else {
-      // 1. New posts check
-      const qPosts = query(collection(db, 'groups', group.id, 'posts'), orderBy('createdAt', 'desc'), limit(1));
-      const postSnap = await getDocs(qPosts).catch(()=>null);
-      if (postSnap && !postSnap.empty) {
-        const latestPostTime = postSnap.docs[0].data().createdAt;
-        if (latestPostTime && latestPostTime.toMillis() > lastSeen.toMillis()) hasUnread = true;
+      // Handle raw date objects or missing timestamps
+      let lastSeenMs = 0;
+      if (lastSeen && typeof lastSeen.toMillis === 'function') {
+        lastSeenMs = lastSeen.toMillis();
+      } else if (lastSeen) {
+        lastSeenMs = new Date(lastSeen).getTime() || 0;
       }
-      
-      // 2. Personal engagements on old posts check
-      if (!hasUnread) {
-        const qEngs = query(
-          collection(db, 'groups', group.id, 'posts'),
-          where('authorId', '==', _currentUser.uid),
-          where('lastEngagedAt', '>', lastSeen),
-          limit(1)
-        );
-        const engSnap = await getDocs(qEngs).catch(()=>null);
-        if (engSnap && !engSnap.empty) hasUnread = true;
-      }
-    }
 
-    if (hasUnread) {
-      if (group.id === _activeGroupId) {
-        showToast('New activity in this group since you left!', 'success');
-        clearBadge(group.id); // Autoclear if they booted directly into it
+      if (!lastSeenMs) {
+        hasUnread = true;
       } else {
-        const chip = document.querySelector(`.group-chip[data-group-id="${group.id}"]`);
-        if (chip && !chip.querySelector('.unread-dot')) {
-          chip.insertAdjacentHTML('beforeend', '<div class="unread-dot"></div>');
+        // 1. New posts check
+        const qPosts = query(collection(db, 'groups', group.id, 'posts'), orderBy('createdAt', 'desc'), limit(1));
+        const postSnap = await getDocs(qPosts);
+        if (postSnap && !postSnap.empty) {
+          const latestPostTime = postSnap.docs[0].data().createdAt;
+          let latestMs = 0;
+          if (latestPostTime && typeof latestPostTime.toMillis === 'function') latestMs = latestPostTime.toMillis();
+          if (latestMs > lastSeenMs) hasUnread = true;
+        }
+        
+        // 2. Personal engagements check (only if safe Timestamp exists)
+        if (!hasUnread && lastSeen && typeof lastSeen.toMillis === 'function') {
+          const qEngs = query(
+            collection(db, 'groups', group.id, 'posts'),
+            where('authorId', '==', _currentUser.uid),
+            where('lastEngagedAt', '>', lastSeen),
+            limit(1)
+          );
+          const engSnap = await getDocs(qEngs);
+          if (engSnap && !engSnap.empty) hasUnread = true;
         }
       }
+
+      if (hasUnread) {
+        if (group.id === _activeGroupId) {
+          // Delay toast slightly so feed can visibly load first
+          setTimeout(() => {
+            showToast('New activity in this group since you left!', 'success');
+          }, 800);
+          clearBadge(group.id);
+        } else {
+          const chip = document.querySelector(`.group-chip[data-group-id="${group.id}"]`);
+          if (chip && !chip.querySelector('.unread-dot')) {
+            chip.insertAdjacentHTML('beforeend', '<div class="unread-dot"></div>');
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Silent badge evaluation error:', e);
     }
   }
 }
 
 function clearBadge(groupId) {
   if (!_currentUser) return;
-  updateDoc(doc(db, 'users', _currentUser.uid), {
-    [`groupActivity.${groupId}.lastSeenAt`]: serverTimestamp()
-  }).catch(() => {});
+  import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js').then(({ setDoc, serverTimestamp }) => {
+    // Use setDoc with merge to effortlessly create groupActivity parent nodes if missing
+    setDoc(doc(db, 'users', _currentUser.uid), {
+      groupActivity: { [groupId]: { lastSeenAt: serverTimestamp() } }
+    }, { merge: true }).catch(() => {});
+  });
   
-  // Fake local cache bump to prevent instant respawning
   if (!window._currentUserData) window._currentUserData = {};
   if (!window._currentUserData.groupActivity) window._currentUserData.groupActivity = {};
-  if (!window._currentUserData.groupActivity[groupId]) window._currentUserData.groupActivity[groupId] = {};
-  window._currentUserData.groupActivity[groupId].lastSeenAt = { toMillis: () => Date.now() + 10000 };
+  window._currentUserData.groupActivity[groupId] = { lastSeenAt: { toMillis: () => Date.now() + 10000 } };
   
   const chip = document.querySelector(`.group-chip[data-group-id="${groupId}"]`);
   if (chip) {
