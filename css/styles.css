@@ -89,6 +89,24 @@ body {
 
 img { display: block; max-width: 100%; }
 
+/* ── Search Group Badge ─────────────────────────────────────────────────── */
+.search-group-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+  font-weight: 600;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 5;
+}
+
 /* ── Brand Gradient Utility ─────────────────────────────────────────────── */
 .brand-gradient {
   background: linear-gradient(135deg, var(--brand-start), var(--brand-mid), var(--brand-end));

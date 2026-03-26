@@ -201,19 +201,16 @@
     <div class="screen-body"></div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════════════════════
-       SCREEN: Search (v2 placeholder)
-  ══════════════════════════════════════════════════════════════════════ -->
   <div id="screen-search" class="screen" role="main" aria-label="Search">
     <header class="top-bar">
       <span class="top-bar-title" style="font-size:17px">Search</span>
     </header>
-    <div class="screen-body">
-      <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <h2>Search</h2>
-        <p>Coming soon — search within your groups.</p>
+    <div class="screen-body" style="padding-top:0;">
+      <div style="padding: 16px; background: var(--surface); position: sticky; top: 0; z-index: 10;">
+        <input type="search" id="global-search-input" placeholder="Search captions, people..." class="search-input" aria-label="Search posts" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-primary); font-size:15px; outline:none;">
+        <p id="search-status-text" style="font-size:12px; color:var(--text-muted); margin-top:8px; text-align:center;">Type to search your groups</p>
       </div>
+      <div class="profile-grid" id="search-results-grid" aria-label="Search results"></div>
     </div>
   </div>
 

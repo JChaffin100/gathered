@@ -4,6 +4,7 @@
 import { listenAuthState, handleRedirectResult, auth } from './auth.js';
 import { subscribeFeed, unsubscribeFeed, loadMorePosts, setGroupAdminCache } from './feed.js';
 import { renderOwnProfile, renderUserProfile } from './profile.js';
+import { initSearch } from './search.js';
 import { openCreatePost, openPostDetail as _openPostDetail } from './post.js';
 import { getUserGroups, findGroupByToken, joinGroup, renderGroupSettings } from './groups.js';
 import { showToast, openSheet, closeSheet } from './utils.js';
@@ -52,7 +53,10 @@ async function init() {
 
   // Bottom nav wiring
   document.getElementById('nav-home')?.addEventListener('click',    () => showScreen('feed'));
-  document.getElementById('nav-search')?.addEventListener('click',  () => showScreen('search'));
+  document.getElementById('nav-search')?.addEventListener('click',  () => {
+    showScreen('search');
+    initSearch(_userGroups);
+  });
   document.getElementById('nav-post')?.addEventListener('click',    () => {
     if (!_activeGroupId) { showToast('Join or create a group first!', 'error'); return; }
     openCreatePost(_activeGroupId, _userGroups);
