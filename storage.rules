@@ -1,26 +1,41 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Group photos: only members can read/write
+
+    // ── Allowlist ─────────────────────────────────────────────────────────
+    // Only these email addresses may access any storage path.
+    // Add or remove emails here to manage family access.
+    function isAllowedUser() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'jodychaffin@gmail.com',
+          'hchaffin00@gmail.com',
+          'codyrchaffin@gmail.com',
+          'bcc122006@gmail.com',
+          'kjchaffin97@gmail.com'
+        ];
+    }
+
+    // Group photos: only allowed users can read/write
     match /groups/{groupId}/posts/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow read: if isAllowedUser();
+      allow write: if isAllowedUser()
         && request.resource.size < 10 * 1024 * 1024  // 10MB max per file
         && request.resource.contentType.matches('image/.*');
     }
 
     // Group cover photos
     match /groups/{groupId}/cover/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow read: if isAllowedUser();
+      allow write: if isAllowedUser()
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
 
-    // User profile photos (if needed)
+    // User profile photos
     match /users/{userId}/avatar/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAllowedUser();
+      allow write: if isAllowedUser() && request.auth.uid == userId;
     }
   }
 }
