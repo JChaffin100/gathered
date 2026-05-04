@@ -147,6 +147,14 @@
   display: block;
 }
 
+.feed-photo-caption {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 6px 16px 8px;
+  font-style: italic;
+  background: var(--surface);
+}
+
 .carousel-dots {
   display: flex;
   justify-content: center;

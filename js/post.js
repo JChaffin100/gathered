@@ -41,18 +41,17 @@ async function loadPostDetail(postId, groupId) {
     const isAuthor = user?.uid === post.authorId;
 
     main.innerHTML = `
-      <!-- Photos -->
       <div class="post-detail-photos post-carousel" data-post-id="${postId}">
         <div class="carousel-track">
           ${(post.photos || []).map((p, i) => `
             <div class="carousel-slide">
               <img class="post-photo" src="${escapeHtml(p.url)}" alt="${post.caption ? escapeHtml(post.caption) : escapeHtml(post.authorName) + "'s photo"}" style="max-height:none;object-fit:contain;background:#000">
-              ${p.caption ? `<p class="post-detail-photo-caption">${escapeHtml(p.caption)}</p>` : ''}
             </div>
           `).join('')}
         </div>
         ${post.photos?.length > 1 ? `<div class="carousel-dots" aria-hidden="true">${post.photos.map((_, i) => `<div class="carousel-dot${i === 0 ? ' active' : ''}"></div>`).join('')}</div>` : ''}
       </div>
+      ${post.photos?.some(p => p.caption) ? `<p class="post-detail-photo-caption" id="detail-photo-caption">${escapeHtml(post.photos[0].caption || '')}</p>` : ''}
 
       ${post.caption ? `<p class="post-detail-caption">${escapeHtml(post.caption)}</p>` : ''}
 
@@ -85,7 +84,7 @@ async function loadPostDetail(postId, groupId) {
       </div>`;
 
     // Carousel swipe
-    initDetailCarousel(main.querySelector('.post-carousel'));
+    initDetailCarousel(main.querySelector('.post-carousel'), post.photos || []);
 
     // Reactions
     main.querySelectorAll('.reaction-btn').forEach((btn) => {
@@ -112,17 +111,25 @@ async function loadPostDetail(postId, groupId) {
   }
 }
 
-function initDetailCarousel(carousel) {
+function initDetailCarousel(carousel, photos) {
   if (!carousel) return;
   const track = carousel.querySelector('.carousel-track');
   const dots  = carousel.querySelectorAll('.carousel-dot');
   let current = 0, startX = 0;
+
+  const captionEl = document.getElementById('detail-photo-caption');
 
   const goTo = (i) => {
     const slides = track.querySelectorAll('.carousel-slide');
     current = Math.max(0, Math.min(i, slides.length - 1));
     track.style.transform = `translateX(-${current * 100}%)`;
     dots.forEach((d, idx) => d.classList.toggle('active', idx === current));
+    // Update caption for the now-visible photo
+    if (captionEl && photos) {
+      const cap = photos[current]?.caption || '';
+      captionEl.textContent = cap;
+      captionEl.style.display = cap ? '' : 'none';
+    }
   };
   carousel.addEventListener('pointerdown', (e) => {
     startX = e.clientX;

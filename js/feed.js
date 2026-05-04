@@ -165,6 +165,7 @@ function buildPostCard(docSnap) {
         ${(post.photos || []).map((p, i) => `
           <div class="carousel-slide">
             <img class="post-photo" src="${escapeHtml(p.url)}" alt="${post.caption ? escapeHtml(post.caption) : escapeHtml(post.authorName) + "'s photo"}" loading="lazy">
+            ${p.caption ? `<p class="feed-photo-caption">${escapeHtml(p.caption)}</p>` : ''}
           </div>
         `).join('')}
       </div>
