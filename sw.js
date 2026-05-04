@@ -1,7 +1,7 @@
 // sw.js — Gathered Service Worker
 // Cache-first for app shell; pass-through for Firebase/Google APIs
 
-const CACHE_NAME = 'gathered-v28';
+const CACHE_NAME = 'gathered-v29';
 const APP_SHELL = [
   './',
   './index.html',
@@ -34,6 +34,7 @@ const PASSTHROUGH_HOSTS = [
   'accounts.google.com',
   'identitytoolkit.googleapis.com',
   'securetoken.googleapis.com',
+  'cdn.jsdelivr.net',       // heic2any and other lazy-loaded CDN libraries
 ];
 
 // Stale-while-revalidate for Google Fonts
