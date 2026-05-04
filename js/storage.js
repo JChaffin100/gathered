@@ -22,10 +22,21 @@ function isHeicFile(file) {
 let _heic2any = null;
 async function convertHeicToJpeg(file) {
   if (!_heic2any) {
+    // Load heic2any from CDN (cdn.jsdelivr.net is in SW passthrough list)
     const mod = await import('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/+esm');
     _heic2any = mod.default;
   }
-  const result = await _heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+
+  // Race the conversion against a 30-second timeout.
+  // heic2any can hang indefinitely on some HEIC files — this ensures
+  // we fail fast instead of freezing the "Processing Photos..." state.
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('HEIC conversion timed out after 30s')), 30000)
+  );
+  const result = await Promise.race([
+    _heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }),
+    timeout,
+  ]);
   return Array.isArray(result) ? result[0] : result;
 }
 
