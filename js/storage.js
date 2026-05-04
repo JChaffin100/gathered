@@ -21,17 +21,38 @@ function isHeicFile(file) {
 
 let _heic2any = null;
 async function convertHeicToJpeg(file) {
+  // ── Strategy 1: Native browser HEIC decoding ──────────────────────────────
+  // Android 10+ natively supports HEIC via OS codecs. Chrome exposes this
+  // through createImageBitmap, which handles modern iPhone HEIC variants
+  // (including HDR gain maps from iPhone 15/16) that heic2any cannot decode.
+  try {
+    const bitmap = await Promise.race([
+      createImageBitmap(file),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('native decode timeout')), 8000)
+      ),
+    ]);
+    const canvas = document.createElement('canvas');
+    canvas.width  = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return new Promise((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', 0.92)
+    );
+  } catch (_nativeErr) {
+    // Native decoding not supported — fall through to heic2any
+  }
+
+  // ── Strategy 2: heic2any library (fallback) ───────────────────────────────
+  // Load from CDN (cdn.jsdelivr.net is in the SW passthrough list so it
+  // bypasses the service worker cache and always hits the network).
   if (!_heic2any) {
-    // Load heic2any from CDN (cdn.jsdelivr.net is in SW passthrough list)
     const mod = await import('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/+esm');
     _heic2any = mod.default;
   }
-
-  // Race the conversion against a 30-second timeout.
-  // heic2any can hang indefinitely on some HEIC files — this ensures
-  // we fail fast instead of freezing the "Processing Photos..." state.
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('HEIC conversion timed out after 30s')), 30000)
+    setTimeout(() => reject(new Error('HEIC conversion timed out')), 15000)
   );
   const result = await Promise.race([
     _heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }),
