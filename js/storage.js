@@ -7,11 +7,44 @@ import {
   deleteObject,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
+// ── HEIC/HEIF Detection & Conversion ──────────────────────────────────────
+// iPhones save photos as HEIC by default. Most non-Safari browsers can't
+// decode HEIC in an <img> tag, so we convert to JPEG first using heic2any.
+// The library (~460 KB) is lazy-loaded from CDN only when a HEIC file is
+// actually selected, so it doesn't affect normal load times.
+
+function isHeicFile(file) {
+  const type = (file.type || '').toLowerCase();
+  if (type === 'image/heic' || type === 'image/heif') return true;
+  return /\.heic$|\.heif$/i.test(file.name || '');
+}
+
+let _heic2any = null;
+async function convertHeicToJpeg(file) {
+  if (!_heic2any) {
+    const mod = await import('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/+esm');
+    _heic2any = mod.default;
+  }
+  const result = await _heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+  return Array.isArray(result) ? result[0] : result;
+}
+
 // ── Image Compression ─────────────────────────────────────────────────────
 export async function compressImage(file, maxDimension = 1920, quality = 0.82) {
+  // Convert HEIC/HEIF to JPEG first if needed
+  let sourceFile = file;
+  if (isHeicFile(file)) {
+    try {
+      sourceFile = await convertHeicToJpeg(file);
+    } catch (err) {
+      console.error('HEIC conversion failed:', err);
+      return null;
+    }
+  }
+
   return new Promise((resolve) => {
     const img = new Image();
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(sourceFile);
     img.onload = () => {
       let { width, height } = img;
       if (width > maxDimension || height > maxDimension) {
@@ -24,7 +57,7 @@ export async function compressImage(file, maxDimension = 1920, quality = 0.82) {
       canvas.height = height;
       canvas.getContext('2d').drawImage(img, 0, 0, width, height);
       canvas.toBlob(
-        (blob) => { URL.revokeObjectURL(url); resolve({ blob, width, height }); },
+        (blob) => { URL.revokeObjectURL(url); resolve(blob ? { blob, width, height } : null); },
         'image/jpeg',
         quality
       );
