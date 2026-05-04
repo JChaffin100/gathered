@@ -2,8 +2,7 @@
 import { auth, db } from '../firebase-config.js';
 import {
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   setPersistence,
   browserLocalPersistence,
   signOut,
@@ -39,21 +38,9 @@ function isAllowedUser(user) {
 export async function signInWithGoogle() {
   try {
     await setPersistence(auth, browserLocalPersistence);
-    await signInWithRedirect(auth, provider);
-  } catch (err) {
-    console.error('Sign-in error:', err);
-    showToast('Sign-in failed. Please try again.', 'error');
-  }
-}
-
-// ── Handle redirect result on page load ──────────────────────────────────
-// Called once on app init — completes the sign-in after returning from Google
-export async function handleRedirectResult() {
-  try {
-    await setPersistence(auth, browserLocalPersistence);
-    const result = await getRedirectResult(auth);
+    const result = await signInWithPopup(auth, provider);
     if (result?.user) {
-      // Check allowlist immediately after redirect completes
+      // Check allowlist immediately after sign-in completes
       if (!isAllowedUser(result.user)) {
         await signOut(auth);
         showAccessDenied();
@@ -64,7 +51,7 @@ export async function handleRedirectResult() {
   } catch (err) {
     if (err.code === 'auth/popup-closed-by-user' ||
         err.code === 'auth/cancelled-popup-request') return;
-    console.error('Redirect result error:', err);
+    console.error('Sign-in error:', err);
     showToast('Sign-in failed. Please try again.', 'error');
   }
 }

@@ -1,7 +1,7 @@
 // js/app.js — App initialization, routing, navigation
 // Theme must be applied before any render — done inline in <head>.
 
-import { listenAuthState, handleRedirectResult, auth } from './auth.js';
+import { listenAuthState, auth } from './auth.js';
 import { subscribeFeed, unsubscribeFeed, loadMorePosts, setGroupAdminCache } from './feed.js';
 import { renderOwnProfile, renderUserProfile } from './profile.js';
 import { initSearch } from './search.js';
@@ -39,9 +39,6 @@ async function init() {
   window.addEventListener('offline', () => showToast("You're offline — some features are unavailable.", 'error'));
   window.addEventListener('online',  () => showToast('Back online!', 'success'));
 
-  // Handle redirect result FIRST — completes sign-in after returning from Google.
-  // Must finish before listenAuthState so onAuthStateChanged sees the signed-in user.
-  await handleRedirectResult();
 
   // Auth state — small delay ensures DOM is fully ready before auth state fires
   setTimeout(() => {
